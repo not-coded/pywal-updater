@@ -12,12 +12,26 @@ def get_current_wallpaper():
             "osascript", "-e",
             'tell application "System Events" to get picture of desktop 1'
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        wallpaper = result.stdout.strip()
-        return wallpaper
+    if platform.system() == "Windows":
+        cmd = [
+            "powershell", "-Command",
+            "Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Control Panel\Desktop' -Name Wallpaper | Select-Object -ExpandProperty Wallpaper"
+        ]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    wallpaper = result.stdout.strip()
+    return wallpaper
+
+def get_wal_path():
+    cmd = [
+        "which", "wal"
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    wal_path = result.stdout.strip()
+    return wal_path
 
 LAST_WALLPAPER_FILE = Path(os.path.join(gettempdir(), "last_wallpaper.txt")) # this doesn't even get the /tmp/ folder what the hell
-WAL_PATH = "/Users/mac/Library/Python/3.9/bin/wal" #TODO: find wal path automatically
+POLLING_RATE=1
 
 def updateWallpaper():
     wallpaper = get_current_wallpaper()
@@ -27,11 +41,10 @@ def updateWallpaper():
 
     last_hash = ""
     if LAST_WALLPAPER_FILE.exists():
-        #print(LAST_WALLPAPER_FILE)
         last_hash = LAST_WALLPAPER_FILE.read_text().strip()
 
     if current_hash != last_hash:
-        subprocess.run([WAL_PATH, "-i", wallpaper])
+        subprocess.run([get_wal_path(), "-i", wallpaper])
         LAST_WALLPAPER_FILE.write_text(current_hash)
         print(f"updated pywal: {wallpaper}")
         print(f"hash: {current_hash}")
@@ -40,7 +53,7 @@ def main():
     # make polling stuff idk
     while True:
         updateWallpaper()
-        time.sleep(1)
+        time.sleep(POLLING_RATE)
         # make polling time configurable (i hate doing configs in python)
 
 if __name__ == "__main__":
